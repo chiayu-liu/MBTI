@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTI 情境測驗</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Basic animation for the result type */
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        .animate-bounce {
+            animation: bounce 1s infinite;
+        }
+        .whitespace-pre-wrap {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center p-4">
+    <div id="app-container" class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-gray-200">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">MBTI 情境測驗</h1>
+
+        <!-- Quiz Section -->
+        <div id="quiz-section">
+            <p id="question-counter" class="text-lg text-gray-600 mb-4 text-center"></p>
+            <h2 id="question-text" class="text-xl font-medium text-gray-700 mb-6 leading-relaxed"></h2>
+            <div id="options-container" class="space-y-4">
+                <!-- Options will be dynamically inserted here -->
+            </div>
+            <div class="flex justify-between mt-8">
+                <button id="previous-button" class="py-2 px-5 rounded-xl font-semibold transition duration-300 ease-in-out bg-gray-300 hover:bg-gray-400 text-gray-800 shadow-md transform hover:scale-105">
+                    上一題
+                </button>
+                <button id="next-submit-button" class="py-2 px-5 rounded-xl font-semibold transition duration-300 ease-in-out bg-blue-500 hover:bg-blue-600 text-white shadow-md transform hover:scale-105">
+                    下一題
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="text-center hidden">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">您的MBTI人格類型是：</h2>
+            <p id="mbti-result" class="text-5xl font-extrabold text-blue-600 mb-4 animate-bounce"></p>
+            <p id="description-loader" class="text-lg text-gray-500 mb-8 hidden">正在生成詳細描述，請稍候...</p>
+            <p id="generated-description" class="text-lg text-gray-600 mb-8 text-left whitespace-pre-wrap"></p>
+
+            <div class="flex flex-col space-y-4 mb-8">
+                <button id="growth-tips-button" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md flex items-center justify-center">
+                    ✨ 獲取成長建議
+                </button>
+                <button id="famous-people-button" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md flex items-center justify-center">
+                    ✨ 看看名人類型
+                </button>
+            </div>
+
+            <div id="growth-tips-section" class="mt-8 p-6 bg-purple-50 rounded-xl border border-purple-200 text-left hidden">
+                <h3 class="text-xl font-semibold text-purple-700 mb-4">個人成長建議：</h3>
+                <p id="growth-tips-loader" class="text-purple-600 hidden">正在生成成長建議，請稍候...</p>
+                <p id="growth-tips-content" class="text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+
+            <div id="famous-people-section" class="mt-8 p-6 bg-green-50 rounded-xl border border-green-200 text-left hidden">
+                <h3 class="text-xl font-semibold text-green-700 mb-4">與您同類型的人物：</h3>
+                <p id="famous-people-loader" class="text-green-600 hidden">正在生成名人列表，請稍候...</p>
+                <p id="famous-people-content" class="text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+
+            <button id="restart-button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300 ease-in-out transform hover:scale-105 shadow-md mt-8">
+                重新測驗
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Define the questions for the MBTI test
+        const questions = [
+            {
+                question: "想像一下你週末有個空閒的晚上，你會選擇：",
+                options: [
+                    { text: "計畫一場與朋友的聚會或參加社交活動。", type: "E" },
+                    { text: "在家裡安靜地看書、追劇或做自己的事。", type: "I" },
+                ],
+            },
+            {
+                question: "當你需要做一個重要決定時，你會傾向於：",
+                options: [
+                    { text: "仔細分析所有數據和事實，權衡利弊後做出理性判斷。", type: "T" },
+                    { text: "考慮這個決定對相關人員的影響，以及是否符合你的價值觀。", type: "F" },
+                ],
+            },
+            {
+                question: "你正在學習一項新技能，你最喜歡的方式是：",
+                options: [
+                    { text: "透過實際操作和動手練習來掌握。", type: "S" },
+                    { text: "先理解背後的理論、概念和可能性。", type: "N" },
+                ],
+            },
+            {
+                question: "當你計畫一次旅行時，你通常會：",
+                options: [
+                    { text: "提前做好詳細的行程規劃和預訂，不喜歡臨時變動。", type: "J" },
+                    { text: "保持行程彈性，喜歡隨心所欲地探索和體驗。", type: "P" },
+                ],
+            },
+            {
+                question: "你在一個陌生環境中，例如第一次參加的社團活動，你會：",
+                options: [
+                    { text: "主動與不同的人打招呼，嘗試認識新朋友。", type: "E" },
+                    { text: "先觀察周圍，和認識的人待在一起，或等待別人來搭話。", type: "I" },
+                ],
+            },
+            {
+                question: "有人向你描述一個問題，你會更傾向於：",
+                options: [
+                    { text: "詢問具體細節、事實和過去的經驗。", type: "S" },
+                    { text: "嘗試理解背後更深層次的含義、可能性和未來發展。", type: "N" },
+                ],
+            },
+            {
+                question: "你和朋友發生意見分歧時，你會：",
+                options: [
+                    { text: "提出邏輯論點，努力說服對方接受你的觀點。", type: "T" },
+                    { text: "嘗試理解對方感受，尋求共識或妥協以維護關係。", type: "F" },
+                ],
+            },
+            {
+                question: "你的工作或學習專案有一個截止日期，你會：",
+                options: [
+                    { text: "提早開始計畫和執行，確保一切按部就班。", type: "J" },
+                    { text: "在截止日期前靈活安排，有時會等到壓力驅動你完成。", type: "P" },
+                ],
+            },
+            {
+                question: "當你需要激勵他人時，你會：",
+                options: [
+                    { text: "著重於目標、效率和客觀的結果。", type: "T" },
+                    { text: "強調團隊合作、和諧氛圍和共同的願景。", type: "F" },
+                ],
+            },
+            {
+                question: "你參加了一個講座或研討會，你更喜歡：",
+                options: [
+                    { text: "具體、詳細且有實用案例的內容。", type: "S" },
+                    { text: "抽象、概念性強且激發思考的內容。", type: "N" },
+                ],
+            },
+        ];
+
+        // MBTI type descriptions (simplified for this example, will be overridden by Gemini API)
+        const mbtiDescriptions = {
+            ISTJ: "實際、有條理、負責任。他們注重事實、邏輯，並對承諾認真負責。",
+            ISFJ: "安靜、友好、有良心。他們樂於助人、忠誠且重視傳統。",
+            INFJ: "洞察力強、有創造力、有原則。他們理解他人感受，並為自己的信念而奮鬥。",
+            INTJ: "獨立、戰略性、有遠見。他們喜歡解決複雜問題，是優秀的規劃者。",
+            ISTP: "務實、適應性強、邏輯性強。他們喜歡動手操作，並能快速應對突發情況。",
+            ISFP: "藝術性、敏感、隨性。他們享受當下，透過藝術和行動表達自我。",
+            INFP: "理想主義、好奇、忠誠。他們追求內心和諧，關心他人的福祉。",
+            INTP: "分析性、客觀、創新。他們喜歡探索複雜概念，是天生的思想家。",
+            ESTP: "精力充沛、行動導向、現實。他們喜歡活在當下，是天生的問題解決者。",
+            ESFP: "外向、熱情、自發。他們喜歡成為關注的焦點，享受生活樂趣。",
+            ENFP: "熱情、富有想像力、善於交際。他們充滿創意，喜歡探索新的可能性。",
+            ENTP: "創新、聰明、辯論性強。他們喜歡挑戰現狀，熱衷於新思想。",
+            ESTJ: "高效、果斷、傳統。他們是天生的組織者和領導者，重視秩序和效率。",
+            ESFJ: "熱情、合作、支持。他們關心他人，是優秀的團隊合作者。",
+            ENFJ: "有魅力、鼓舞人心、富有同情心。他們善於引導他人，是天生的教育家。",
+            ENTJ: "領導者、果斷、有遠見。他們目標明確，善於組織和實現目標。",
+        };
+
+        // Global state variables
+        let currentQuestionIndex = 0;
+        let answers = {}; // Stores { questionIndex: 'E' | 'I' | 'S' | 'N' | 'T' | 'F' | 'J' | 'P' }
+        let result = '';
+        let showResult = false;
+        let loadingDescription = false;
+        let generatedDescription = '';
+        let loadingGrowthTips = false;
+        let growthTipsContent = '';
+        let showGrowthTips = false;
+        let loadingFamousPeople = false;
+        let famousPeopleContent = '';
+        let showFamousPeople = false;
+
+        // Get DOM elements
+        const quizSection = document.getElementById('quiz-section');
+        const resultSection = document.getElementById('result-section');
+        const questionCounter = document.getElementById('question-counter');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const previousButton = document.getElementById('previous-button');
+        const nextSubmitButton = document.getElementById('next-submit-button');
+        const mbtiResultDisplay = document.getElementById('mbti-result');
+        const descriptionLoader = document.getElementById('description-loader');
+        const generatedDescriptionDisplay = document.getElementById('generated-description');
+        const growthTipsButton = document.getElementById('growth-tips-button');
+        const famousPeopleButton = document.getElementById('famous-people-button');
+        const growthTipsSection = document.getElementById('growth-tips-section');
+        const growthTipsLoader = document.getElementById('growth-tips-loader');
+        const growthTipsContentDisplay = document.getElementById('growth-tips-content');
+        const famousPeopleSection = document.getElementById('famous-people-section');
+        const famousPeopleLoader = document.getElementById('famous-people-loader');
+        const famousPeopleContentDisplay = document.getElementById('famous-people-content');
+        const restartButton = document.getElementById('restart-button');
+
+        // Function to update button styles based on disabled state
+        function updateButtonState(button, isDisabled, isSubmit = false) {
+            button.disabled = isDisabled;
+            if (isDisabled) {
+                button.classList.remove('bg-blue-500', 'hover:bg-blue-600', 'bg-green-500', 'hover:bg-green-600', 'text-white', 'shadow-md', 'transform', 'hover:scale-105');
+                button.classList.add('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+            } else {
+                button.classList.remove('bg-gray-200', 'text-gray-500', 'cursor-not-allowed');
+                if (isSubmit) {
+                    button.classList.add('bg-green-500', 'hover:bg-green-600', 'text-white', 'shadow-md', 'transform', 'hover:scale-105');
+                } else {
+                    button.classList.add('bg-blue-500', 'hover:bg-blue-600', 'text-white', 'shadow-md', 'transform', 'hover:scale-105');
+                }
+            }
+        }
+
+        // Function to render the current quiz question
+        function renderQuiz() {
+            quizSection.classList.remove('hidden');
+            resultSection.classList.add('hidden');
+
+            const currentQ = questions[currentQuestionIndex];
+            questionCounter.textContent = `問題 ${currentQuestionIndex + 1} / ${questions.length}`;
+            questionText.textContent = currentQ.question;
+            optionsContainer.innerHTML = ''; // Clear previous options
+
+            currentQ.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.classList.add(
+                    'w-full', 'text-left', 'py-3', 'px-5', 'rounded-xl', 'border-2',
+                    'transition', 'duration-200', 'ease-in-out', 'transform', 'hover:scale-[1.02]'
+                );
+                button.dataset.type = option.type; // Store the type in a data attribute
+
+                // Apply selected style if this option was previously chosen
+                if (answers[currentQuestionIndex] === option.type) {
+                    button.classList.add('bg-blue-500', 'border-blue-500', 'text-white', 'shadow-lg');
+                } else {
+                    button.classList.add('bg-gray-50', 'border-gray-200', 'text-gray-800', 'hover:bg-blue-50', 'hover:border-blue-300');
+                }
+
+                button.addEventListener('click', () => handleAnswerSelect(option.type));
+                optionsContainer.appendChild(button);
+            });
+
+            // Update navigation button states
+            updateButtonState(previousButton, currentQuestionIndex === 0);
+            const isCurrentQuestionAnswered = answers[currentQuestionIndex] !== undefined;
+
+            if (currentQuestionIndex === questions.length - 1) {
+                nextSubmitButton.textContent = '提交測驗';
+                updateButtonState(nextSubmitButton, !isCurrentQuestionAnswered, true); // True for submit button styling
+            } else {
+                nextSubmitButton.textContent = '下一題';
+                updateButtonState(nextSubmitButton, !isCurrentQuestionAnswered);
+            }
+        }
+
+        // Function to render the result screen
+        function renderResult() {
+            quizSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+
+            mbtiResultDisplay.textContent = result;
+            generatedDescriptionDisplay.textContent = generatedDescription || mbtiDescriptions[result] || "未找到描述。";
+
+            // Show/hide loaders and content based on state
+            descriptionLoader.classList.toggle('hidden', !loadingDescription);
+            generatedDescriptionDisplay.classList.toggle('hidden', loadingDescription);
+
+            growthTipsSection.classList.toggle('hidden', !showGrowthTips);
+            growthTipsLoader.classList.toggle('hidden', !loadingGrowthTips);
+            growthTipsContentDisplay.classList.toggle('hidden', loadingGrowthTips);
+            growthTipsContentDisplay.textContent = growthTipsContent;
+
+            famousPeopleSection.classList.toggle('hidden', !showFamousPeople);
+            famousPeopleLoader.classList.toggle('hidden', !loadingFamousPeople);
+            famousPeopleContentDisplay.classList.toggle('hidden', loadingFamousPeople);
+            famousPeopleContentDisplay.textContent = famousPeopleContent;
+        }
+
+        // Main function to update the UI based on current state
+        function updateUI() {
+            if (showResult) {
+                renderResult();
+            } else {
+                renderQuiz();
+            }
+        }
+
+        // Function to handle answer selection
+        function handleAnswerSelect(type) {
+            answers[currentQuestionIndex] = type;
+            renderQuiz(); // Re-render to update selected option style
+        }
+
+        // Function to navigate to the next question
+        function handleNext() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderQuiz();
+            }
+        }
+
+        // Function to navigate to the previous question
+        function handlePrevious() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuiz();
+            }
+        }
+
+        // Function to fetch MBTI description from Gemini API
+        async function fetchMbtiDescription(mbtiType) {
+            loadingDescription = true;
+            generatedDescription = '';
+            updateUI(); // Update UI to show loader
+
+            try {
+                const prompt = `請為MBTI人格類型 ${mbtiType} 提供一個詳細的描述，包括其主要特徵、優勢、潛在挑戰以及適合的職業方向。請用繁體中文回答。`;
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // API key will be provided by the Canvas environment
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const resultData = await response.json();
+
+                if (resultData.candidates && resultData.candidates.length > 0 &&
+                    resultData.candidates[0].content && resultData.candidates[0].content.parts &&
+                    resultData.candidates[0].content.parts.length > 0) {
+                    const text = resultData.candidates[0].content.parts[0].text;
+                    generatedDescription = text;
+                } else {
+                    console.error("Gemini API response structure unexpected:", resultData);
+                    generatedDescription = "無法生成詳細描述，請稍後再試。"; // Fallback message
+                }
+            } catch (error) {
+                console.error("Error fetching description from Gemini API:", error);
+                generatedDescription = "生成描述時發生錯誤。"; // Error message
+            } finally {
+                loadingDescription = false;
+                updateUI(); // Update UI to hide loader and show content
+            }
+        }
+
+        // Function to fetch personalized growth tips from Gemini API
+        async function fetchGrowthTips(mbtiType) {
+            loadingGrowthTips = true;
+            growthTipsContent = '';
+            showGrowthTips = true; // Show the section when fetching
+            updateUI(); // Update UI to show loader
+
+            try {
+                const prompt = `請為MBTI人格類型 ${mbtiType} 提供5個具體的個人成長建議。請用繁體中文以條列式呈現。`;
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const resultData = await response.json();
+
+                if (resultData.candidates && resultData.candidates.length > 0 &&
+                    resultData.candidates[0].content && resultData.candidates[0].content.parts &&
+                    resultData.candidates[0].content.parts.length > 0) {
+                    const text = resultData.candidates[0].content.parts[0].text;
+                    growthTipsContent = text;
+                } else {
+                    console.error("Gemini API response structure unexpected:", resultData);
+                    growthTipsContent = "無法生成成長建議，請稍後再試。";
+                }
+            } catch (error) {
+                console.error("Error fetching growth tips from Gemini API:", error);
+                growthTipsContent = "生成成長建議時發生錯誤。";
+            } finally {
+                loadingGrowthTips = false;
+                updateUI(); // Update UI to hide loader and show content
+            }
+        }
+
+        // Function to fetch famous people with the same MBTI type from Gemini API
+        async function fetchFamousPeople(mbtiType) {
+            loadingFamousPeople = true;
+            famousPeopleContent = '';
+            showFamousPeople = true; // Show the section when fetching
+            updateUI(); // Update UI to show loader
+
+            try {
+                const prompt = `列出5位著名的歷史人物或公眾人物，他們被認為是MBTI人格類型 ${mbtiType}。請用繁體中文以條列式呈現，並簡要說明他們為何被認為是這個類型。`;
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+                const payload = { contents: chatHistory };
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const resultData = await response.json();
+
+                if (resultData.candidates && resultData.candidates.length > 0 &&
+                    resultData.candidates[0].content && resultData.candidates[0].content.parts &&
+                    resultData.candidates[0].content.parts.length > 0) {
+                    const text = resultData.candidates[0].content.parts[0].text;
+                    famousPeopleContent = text;
+                } else {
+                    console.error("Gemini API response structure unexpected:", resultData);
+                    famousPeopleContent = "無法生成名人列表，請稍後再試。";
+                }
+            } catch (error) {
+                console.error("Error fetching famous people from Gemini API:", error);
+                famousPeopleContent = "生成名人列表時發生錯誤。";
+            } finally {
+                loadingFamousPeople = false;
+                updateUI(); // Update UI to hide loader and show content
+            }
+        }
+
+        // Function to calculate the MBTI result
+        async function calculateResult() {
+            const scores = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
+
+            // Tally scores based on selected answers
+            Object.values(answers).forEach((type) => {
+                if (scores[type] !== undefined) {
+                    scores[type]++;
+                }
+            });
+
+            let mbtiType = "";
+            mbtiType += scores.E >= scores.I ? "E" : "I";
+            mbtiType += scores.S >= scores.N ? "S" : "N";
+            mbtiType += scores.T >= scores.F ? "T" : "F";
+            mbtiType += scores.J >= scores.P ? "J" : "P";
+
+            result = mbtiType;
+            showResult = true;
+            updateUI(); // Switch to result view
+
+            // After setting the result, fetch the detailed description
+            await fetchMbtiDescription(mbtiType);
+        }
+
+        // Function to restart the test
+        function handleRestart() {
+            currentQuestionIndex = 0;
+            answers = {};
+            result = '';
+            showResult = false;
+            loadingDescription = false;
+            generatedDescription = '';
+            loadingGrowthTips = false;
+            growthTipsContent = '';
+            showGrowthTips = false;
+            loadingFamousPeople = false;
+            famousPeopleContent = '';
+            showFamousPeople = false;
+            updateUI(); // Render the quiz again
+        }
+
+        // Add event listeners
+        window.onload = () => {
+            previousButton.addEventListener('click', handlePrevious);
+            nextSubmitButton.addEventListener('click', () => {
+                if (currentQuestionIndex === questions.length - 1) {
+                    calculateResult();
+                } else {
+                    handleNext();
+                }
+            });
+            growthTipsButton.addEventListener('click', () => fetchGrowthTips(result));
+            famousPeopleButton.addEventListener('click', () => fetchFamousPeople(result));
+            restartButton.addEventListener('click', handleRestart);
+
+            // Initial render
+            updateUI();
+        };
+    </script>
+</body>
+</html>
